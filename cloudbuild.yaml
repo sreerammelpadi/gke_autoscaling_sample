@@ -1,0 +1,40 @@
+steps:
+# Build the server image
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/app-repo/server:$COMMIT_SHA', '-f', 'server/Dockerfile', 'server/']
+
+# Build the producer image
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/app-repo/producer:$COMMIT_SHA', '-f', 'producer/Dockerfile', '.']
+
+# Push both images to Artifact Registry
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/app-repo/server:$COMMIT_SHA']
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/app-repo/producer:$COMMIT_SHA']
+
+# Deploy server to GKE
+- name: 'gcr.io/cloud-builders/kubectl'
+  args:
+  - 'set'
+  - 'image'
+  - 'deployment/server-app'
+  - 'server=us-central1-docker.pkg.dev/$PROJECT_ID/app-repo/server:$COMMIT_SHA'
+  env:
+  - 'CLOUDSDK_COMPUTE_ZONE=us-central1-a'
+  - 'CLOUDSDK_CONTAINER_CLUSTER=env-gca-opt-cluster'
+
+# Deploy producer to VM by updating the container image
+- name: 'gcr.io/cloud-builders/gcloud'
+  args:
+  - 'compute'
+  - 'instances'
+  - 'update-container'
+  - 'producer-vm'
+  - '--container-image'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/app-repo/producer:$COMMIT_SHA'
+  - '--zone'
+  - 'us-central1-a'
+
+options:
+  requestedVerifyOption: VERIFIED
