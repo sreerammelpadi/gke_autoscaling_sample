@@ -1,5 +1,5 @@
 {
   "enabled": true,
-  "requests_per_second": 60,
+  "requests_per_second": 61,
   "target_url": "http://34.61.77.9"
 }
